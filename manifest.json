@@ -1,0 +1,8 @@
+{
+	"short_name" : "WebRadio",
+	"name" : "WebRadio",
+	"description" : "Hear radio with your smartphone, tablet or computer",
+	"start_url" : "https://franzweb.lima-city.de/Webradio2/",
+	"display" : "standalone",
+	"orientation" : "portrait"
+}

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" type="image/x-icon" href="index.ico" />
+  <meta name="viewport" content="width=device-width,user-scalable=0,minimal-ui,initial-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Franzls WebRadio</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+  <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+  <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+  <!-- 
+  <link rel="stylesheet" href="index.css" />
+  <script src="index.js"></script>
+  -->
+  <script src="webradio.js"></script>
+  <script src="stations.js"></script>
+  <!-- -->
+  <script>
+  document.addEventListener( 'touchstart', function(){}, {passive: false} )
+  /* 
+   * This code prevents the error messages on chrome:
+   * [Intervention] Unable to preventDefault inside passive event listener 
+   * due to target being treated as passive. See <URL>
+   */
+  </script>
+  <!-- -->
+  <script>
+  //
+  var ply = null;
+  var LocalStorageStation = 0;
+  var LocalStorageVolume  = 20;
+  
+  /**
+   *  This function sets the player.
+   *  Supported command (sCmd) are:
+   *  "play", "stop", "volume"
+   *  @param  sCmd    command
+   *  @param  sParam  optional parameter
+   */
+  function playerSet( sCmd, sParam="" )
+  {
+    if( null == ply )
+    {
+      ply = document.getElementById( 'player' );
+    }
+    //
+    if( sCmd == "toggle" )                                  //command toggle?
+    {                                                       // yes, then...
+      sCmd = "stop";                                        // set default command "stop"
+      if( ply.paused )                                      // is player is paused mode?
+      {                                                     //  yes, then...
+        sCmd = "play";                                      //  set player to "play"
+      }
+    }
+    //
+    switch( sCmd )                                          //handle commands
+    {
+    case "play":
+      ply.pause();
+      if( sParam.length > 0 ) {  ply.src = sParam; }
+      ply.play();
+      $("#playstate").removeClass( "ui-icon-delete" );
+      $("#playstate").addClass( "ui-icon-audio" );
+      // icon audio 
+      break;
+    case "stop":
+      if( sParam.length > 0 ) {  ply.src = sParam; }
+      ply.pause();
+      $("#playstate").removeClass( "ui-icon-audio" );
+      $("#playstate").addClass( "ui-icon-delete" );
+      // icon delete
+      break;
+    case "volume":
+      ply.volume = Math.pow( 10, sParam );
+      break;
+    default:
+      ply.pause();
+      break;
+    }
+  }
+  
+  /**
+   *  This function will be called, if the user
+   *  selects a radio station.
+   *  @param nIdx index of the current radio station
+   */
+  function playStation( nIdx, nGrpToggle=0 )
+  {
+    $("[id^='sta']").removeClass( "selected" );             //remove all selected items
+    $("#sta"+nIdx).addClass( "selected" );                  //select clicked radio station
+    document.getElementById( "header" ).innerHTML = "Du hörst "+aStations[nIdx].sName;  //update headline
+    if( 0 != nGrpToggle )
+    {
+      grpToggle( $("#sta"+nIdx).attr( "name" ) );
+    }
+    playerSet( "play", aStations[nIdx].sLink );             //start player
+    localStorage.setItem( LocalStorageStation, nIdx );
+  }
+
+  /**
+   *  This function toggles the player state 
+   *  from play->stop or from stop->play.
+   */
+  function playerToggle()
+  {
+    playerSet( "toggle" );
+  }
+
+  /**
+   *  This function opens/closes a group of radiostations.
+   *  @param  sId   id of the group
+   */
+  function grpToggle( sId )
+  {
+    let aEle = document.getElementsByName( sId );
+    let sDis = "none";
+    let sSel = "#"+sId;
+    if( aEle[0].style.display == "none" )
+    {
+      sDis = "block";
+      $(sSel).removeClass( "ui-icon-carat-u" );
+      $(sSel).addClass( "ui-icon-carat-d" );
+    }
+    else
+    {
+      $(sSel).removeClass( "ui-icon-carat-d" );
+      $(sSel).addClass( "ui-icon-carat-u" );
+    }
+    //
+    for( let nIdx=0; nIdx < aEle.length; nIdx++ )
+    {
+      aEle[nIdx].style.display = sDis;
+    }
+  }
+  
+  /**
+   *  This function sets the current volume of the
+   */
+  function volume( nVol )
+  {
+    playerSet( "volume", (nVol-100)/40 );
+    localStorage.setItem( LocalStorageVolume, nVol );
+  }
+  
+  /**
+   *  This function shows all stations
+   */
+  function showStations()
+  {
+    let sList = "";
+    let sStation = "";
+    let nStation = 0;
+    for( let nIdx=0; nIdx<aStations.length; nIdx++ )
+    {
+      if( sStation != aStations[nIdx].sStation )
+      {
+        nStation++;
+        sStation = aStations[nIdx].sStation;
+        sList   += "<li class='ui-li-static ui-body-inherit' onclick='grpToggle(\"grp"+nStation+"\");'>";
+        sList   += "<a href='' id='grp"+nStation+"' class='ui-btn-icon-right ui-icon-carat-u' style='text-decoration:none;' >";
+        sList   += sStation;
+        sList   += "</a>";
+        sList   += "</li>\n";
+      }
+      sList += "<li id='sta"+nIdx+"' data-icon='audio' class='ui-child' style='display:none;' name='grp"+nStation+"' onclick='playStation("+nIdx+");'>";
+      sList += "<a href='' class='ui-btn ui-btn-icon-right ui-icon-audio'>";
+      sList += aStations[nIdx].sName;
+      sList += "</a>";
+      sList += "</li>\n";
+    }  //for()
+    document.getElementById( "stations" ).innerHTML = sList;
+    $("[id^=grp]").css( "color", "grey" );
+  }
+  
+  function restoreLastSets()
+  {
+    let nStation = localStorage.getItem( LocalStorageStation );
+    let nVolume  = localStorage.getItem( LocalStorageVolume );
+    //
+    if( null != nVolume ) 
+    {
+      $("#playvolume").val( nVolume );
+      $("#playvolume").slider( "refresh" );
+      volume( nVolume );
+    }
+    else
+    {
+      nVolume = $("#playvolume").val();
+    }
+    volume( nVolume );
+    //
+    if( null != nStation )
+    {
+      playStation( nStation, 1 );
+    }  //if( null ... )
+  }  
+  
+  </script>
+  <!-- -->
+  <style>
+    .selected 
+    { 
+      border-top: 1px solid green;
+      border-bottom: 1px solid green;
+      border-left:  10px solid green;
+      border-right:  1px solid green;
+    }
+    .theme 
+    { 
+      background-color: NavajoWhite;
+    }
+  </style>
+  <!-- -->
+</head>
+<!-- ******************************************************* -->
+<body onload="showStations();restoreLastSets();">
+<audio id='player'></audio>
+<div data-role="page">
+  <!-- OVERALL HEADER -->
+  <div data-role="header" style="overflow:hidden;background-color:PowderBlue;" data-position="fixed">
+    <h4 id="header" style="margin:0px;">Radio Sender - Station</h4> 
+  </div>
+  <!-- OVERALL FOOTER -->
+  <div id="footer" data-role="footer" style="overflow:hidden;background-color:PowderBlue;" data-position="fixed" data-tap-toggle="false">
+    <table border="0">
+      <tr>
+        <td style="width:calc(100vw - 3em);">
+          <input id="playvolume" type="range" id="vol" min="0" max="100" value="10" onchange="volume(this.value);">
+        </td>
+        <td style="width:2em;"> 
+          <button id="playstate" style="width:3em;" class="ui-btn ui-shadow ui-corner-all ui-icon-delete ui-btn-icon-notext ui-btn-b ui-btn-icon-top ui-btn-inline" onclick="playerToggle();">
+          </button>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+    <ul id="stations" data-role="listview" data-inset="true">
+  </div>  <!-- main -->
+</div> <!-- /page -->
+
+</body>
+</html>
